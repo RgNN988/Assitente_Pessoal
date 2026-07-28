@@ -1,19 +1,26 @@
-import type { CategoryId, Group, Reward, ScheduleEvent } from '../types'
+import type { Category, CategoryId, Group, Reward, ScheduleEvent } from '../types'
 
-export const CATEGORIES: Record<
-  CategoryId,
-  { label: string; group: Group; icon: string }
-> = {
-  prova: { label: 'Estudo para prova', group: 'estudos', icon: '⚔️' },
-  lista: { label: 'Lista de exercícios', group: 'estudos', icon: '📜' },
-  material: { label: 'Material / leitura', group: 'estudos', icon: '📖' },
-  itajr: { label: 'ITA Júnior', group: 'iniciativas', icon: '🏛️' },
-  lei: { label: 'Liga de Empreendedorismo', group: 'iniciativas', icon: '🚀' },
-  jiujitsu: { label: 'Jiu-jitsu', group: 'jiujitsu', icon: '🥋' },
-  pessoal: { label: 'Pessoal', group: 'pessoal', icon: '🎒' },
+export const DEFAULT_CATEGORIES: Category[] = [
+  { id: 'prova', label: 'Estudo para prova', group: 'estudos', icon: '⚔️' },
+  { id: 'lista', label: 'Lista de exercícios', group: 'estudos', icon: '📜' },
+  { id: 'material', label: 'Material / leitura', group: 'estudos', icon: '📖' },
+  { id: 'itajr', label: 'ITA Júnior', group: 'iniciativas', icon: '🏛️' },
+  { id: 'lei', label: 'Liga de Empreendedorismo', group: 'iniciativas', icon: '🚀' },
+  { id: 'jiujitsu', label: 'Jiu-jitsu', group: 'jiujitsu', icon: '🥋' },
+  { id: 'pessoal', label: 'Pessoal', group: 'pessoal', icon: '🎒' },
+]
+
+/** Categoria pode ter sido excluída; tarefas antigas ainda apontam para ela. */
+export function categoryInfo(categories: Category[], id: CategoryId): Category {
+  return (
+    categories.find((c) => c.id === id) ?? {
+      id,
+      label: 'Categoria removida',
+      icon: '❔',
+      group: 'pessoal',
+    }
+  )
 }
-
-export const CATEGORY_IDS = Object.keys(CATEGORIES) as CategoryId[]
 
 export const GROUPS: Record<Group, { label: string; color: string }> = {
   estudos: { label: 'Estudos', color: 'var(--c-estudos)' },

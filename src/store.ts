@@ -1,7 +1,9 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type {
+  Category,
   CategoryId,
+  Group,
   LedgerEntry,
   Reward,
   ScheduleEvent,
@@ -11,18 +13,20 @@ import type {
 } from './types'
 import {
   ACHIEVEMENTS,
-  CATEGORIES,
+  DEFAULT_CATEGORIES,
   DEFAULT_REWARDS,
   DEFAULT_SCHEDULE,
   DEFAULT_TURMA,
   DEFAULT_WEIGHTS,
   aulasForTurma,
+  categoryInfo,
 } from './data/defaults'
 import { balance, jjTitle, rankFor, streakDays, todayKey, totalXp, uid } from './lib/helpers'
 import { BELTS } from './data/defaults'
 
 interface State {
   heroName: string
+  categories: Category[]
   weights: Record<CategoryId, number>
   tasks: Task[]
   studyItems: StudyItem[]
@@ -39,6 +43,10 @@ interface State {
 
   setHeroName: (name: string) => void
   setWeight: (cat: CategoryId, points: number) => void
+
+  addCategory: (label: string, icon: string, group: Group, points: number) => void
+  updateCategory: (id: CategoryId, patch: Partial<Omit<Category, 'id'>>) => void
+  deleteCategory: (id: CategoryId) => void
 
   addTask: (title: string, category: CategoryId, points?: number) => void
   toggleTask: (id: string) => void
@@ -133,6 +141,7 @@ export const useStore = create<State>()(
 
       return {
         heroName: 'Guerreiro',
+        categories: [...DEFAULT_CATEGORIES],
         weights: { ...DEFAULT_WEIGHTS },
         tasks: [],
         studyItems: [],
@@ -150,6 +159,31 @@ export const useStore = create<State>()(
         setHeroName: (heroName) => set({ heroName }),
         setWeight: (cat, points) =>
           set((s) => ({ weights: { ...s.weights, [cat]: Math.max(0, points) } })),
+
+        addCategory: (label, icon, group, points) => {
+          const id = uid()
+          set((s) => ({
+            categories: [...s.categories, { id, label, icon: icon || '⭐', group }],
+            weights: { ...s.weights, [id]: Math.max(0, points) },
+          }))
+          toast(`${icon || '⭐'} Categoria criada: ${label}`, 'level')
+        },
+
+        updateCategory: (id, patch) =>
+          set((s) => ({
+            categories: s.categories.map((c) => (c.id === id ? { ...c, ...patch } : c)),
+          })),
+
+        deleteCategory: (id) => {
+          const s = get()
+          if (s.categories.length <= 1) {
+            toast('Mantenha ao menos uma categoria', 'spend')
+            return
+          }
+          const weights = { ...s.weights }
+          delete weights[id]
+          set({ categories: s.categories.filter((c) => c.id !== id), weights })
+        },
 
         addTask: (title, category, points) =>
           set((s) => ({
@@ -176,7 +210,7 @@ export const useStore = create<State>()(
               id: `task-${task.id}`,
               ts: new Date().toISOString(),
               points: task.points,
-              group: CATEGORIES[task.category].group,
+              group: categoryInfo(s.categories, task.category).group,
               label: task.title,
             }
             set({
@@ -299,6 +333,7 @@ export const useStore = create<State>()(
           const s = get()
           if (s.trainings.includes(day)) return
           const xpBefore = totalXp(s.ledger)
+          const jjPoints = s.weights.jiujitsu ?? DEFAULT_WEIGHTS.jiujitsu
           set({
             trainings: [...s.trainings, day].sort(),
             ledger: [
@@ -306,13 +341,13 @@ export const useStore = create<State>()(
               {
                 id: `jj-${day}`,
                 ts: new Date(day + 'T20:00:00').toISOString(),
-                points: s.weights.jiujitsu,
+                points: jjPoints,
                 group: 'jiujitsu',
                 label: 'Treino de jiu-jitsu',
               },
             ],
           })
-          toast(`🥋 Treino registrado! +${s.weights.jiujitsu} XP`, 'xp')
+          toast(`🥋 Treino registrado! +${jjPoints} XP`, 'xp')
           afterEarn(xpBefore)
         },
 
@@ -352,9 +387,9 @@ export const useStore = create<State>()(
           set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 
         exportData: () => {
-          const { heroName, weights, tasks, studyItems, ledger, rewards, schedule, turma, trainings, jjBeltIndex, jjDegree, jjPromotedAt, seenAchievements } = get()
+          const { heroName, categories, weights, tasks, studyItems, ledger, rewards, schedule, turma, trainings, jjBeltIndex, jjDegree, jjPromotedAt, seenAchievements } = get()
           return JSON.stringify(
-            { version: 1, heroName, weights, tasks, studyItems, ledger, rewards, schedule, turma, trainings, jjBeltIndex, jjDegree, jjPromotedAt, seenAchievements },
+            { version: 2, heroName, categories, weights, tasks, studyItems, ledger, rewards, schedule, turma, trainings, jjBeltIndex, jjDegree, jjPromotedAt, seenAchievements },
             null,
             2,
           )
@@ -366,6 +401,7 @@ export const useStore = create<State>()(
             if (!d || typeof d !== 'object' || !Array.isArray(d.ledger)) return false
             set({
               heroName: d.heroName ?? 'Guerreiro',
+              categories: Array.isArray(d.categories) && d.categories.length ? d.categories : [...DEFAULT_CATEGORIES],
               weights: { ...DEFAULT_WEIGHTS, ...(d.weights ?? {}) },
               tasks: d.tasks ?? [],
               studyItems: d.studyItems ?? [],
@@ -398,6 +434,7 @@ export const useStore = create<State>()(
         resetAll: () =>
           set({
             heroName: 'Guerreiro',
+            categories: [...DEFAULT_CATEGORIES],
             weights: { ...DEFAULT_WEIGHTS },
             tasks: [],
             studyItems: [],
@@ -415,21 +452,26 @@ export const useStore = create<State>()(
     },
     {
       name: 'guilda-ita',
-      version: 2,
+      version: 3,
       // v2: turma do usuário confirmada = 4; regenera as aulas uma única vez.
-      migrate: (persisted) => {
+      // v3: categorias viram dados editáveis no estado.
+      migrate: (persisted, version) => {
         const p = persisted as Partial<State> | undefined
-        if (p && Array.isArray(p.schedule)) {
+        if (p && version < 2 && Array.isArray(p.schedule)) {
           p.turma = DEFAULT_TURMA
           p.schedule = [
             ...p.schedule.filter((e) => !e.id.startsWith('aula-')),
             ...aulasForTurma(DEFAULT_TURMA),
           ]
         }
+        if (p && (!Array.isArray(p.categories) || p.categories.length === 0)) {
+          p.categories = [...DEFAULT_CATEGORIES]
+        }
         return p as State
       },
       partialize: (s) => ({
         heroName: s.heroName,
+        categories: s.categories,
         weights: s.weights,
         tasks: s.tasks,
         studyItems: s.studyItems,

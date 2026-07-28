@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useStore } from '../store'
-import { CATEGORIES, CATEGORY_IDS, GROUPS } from '../data/defaults'
+import { GROUPS, categoryInfo } from '../data/defaults'
 import type { CategoryId, Task } from '../types'
 import { EmptyState, SectionTitle } from './ui'
 
 function TaskRow({ task }: { task: Task }) {
   const toggleTask = useStore((s) => s.toggleTask)
   const deleteTask = useStore((s) => s.deleteTask)
-  const cat = CATEGORIES[task.category]
+  const categories = useStore((s) => s.categories)
+  const cat = categoryInfo(categories, task.category)
   const done = !!task.doneAt
 
   return (
@@ -63,20 +64,26 @@ function TaskRow({ task }: { task: Task }) {
 export default function Missions() {
   const tasks = useStore((s) => s.tasks)
   const weights = useStore((s) => s.weights)
+  const categories = useStore((s) => s.categories)
   const addTask = useStore((s) => s.addTask)
 
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState<CategoryId>('prova')
   const [points, setPoints] = useState('')
 
+  // Se a categoria selecionada foi excluída, cai na primeira disponível.
+  const activeCategory = categories.some((c) => c.id === category)
+    ? category
+    : categories[0]?.id ?? ''
+
   const pending = tasks.filter((t) => !t.doneAt)
   const done = tasks.filter((t) => t.doneAt)
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim()) return
+    if (!title.trim() || !activeCategory) return
     const pts = points ? Math.max(1, Number(points)) : undefined
-    addTask(title.trim(), category, pts)
+    addTask(title.trim(), activeCategory, pts)
     setTitle('')
     setPoints('')
   }
@@ -95,13 +102,13 @@ export default function Missions() {
           />
           <select
             className="input sm:w-56"
-            value={category}
-            onChange={(e) => setCategory(e.target.value as CategoryId)}
+            value={activeCategory}
+            onChange={(e) => setCategory(e.target.value)}
             aria-label="Categoria"
           >
-            {CATEGORY_IDS.map((c) => (
-              <option key={c} value={c}>
-                {CATEGORIES[c].icon} {CATEGORIES[c].label} (+{weights[c]})
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.icon} {c.label} (+{weights[c.id] ?? 0})
               </option>
             ))}
           </select>
@@ -109,7 +116,7 @@ export default function Missions() {
             className="input sm:w-24"
             type="number"
             min={1}
-            placeholder={`+${weights[category]}`}
+            placeholder={`+${weights[activeCategory] ?? 0}`}
             value={points}
             onChange={(e) => setPoints(e.target.value)}
             aria-label="Pontos personalizados (opcional)"

@@ -1,13 +1,13 @@
-export type CategoryId =
-  | 'prova'
-  | 'lista'
-  | 'material'
-  | 'itajr'
-  | 'lei'
-  | 'jiujitsu'
-  | 'pessoal'
+export type CategoryId = string
 
 export type Group = 'estudos' | 'iniciativas' | 'jiujitsu' | 'pessoal'
+
+export interface Category {
+  id: CategoryId
+  label: string
+  icon: string
+  group: Group
+}
 
 export interface Task {
   id: string

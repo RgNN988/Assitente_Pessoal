@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useStore } from '../store'
 import { fmtPts } from '../lib/helpers'
+import { DEFAULT_WEIGHTS } from '../data/defaults'
 import type { StudyItem, StudyKind } from '../types'
 import { EmptyState, SectionTitle } from './ui'
 
@@ -120,7 +121,9 @@ export default function Study() {
   const [points, setPoints] = useState('')
   const [examDate, setExamDate] = useState('')
 
-  const suggested = weights[KIND_TO_CATEGORY[kind]] * Math.max(1, Math.ceil(Number(units || 1) / 5))
+  const suggested =
+    (weights[KIND_TO_CATEGORY[kind]] ?? DEFAULT_WEIGHTS[KIND_TO_CATEGORY[kind]]) *
+    Math.max(1, Math.ceil(Number(units || 1) / 5))
 
   const open = studyItems.filter((i) => i.doneUnits < i.totalUnits)
   const finished = studyItems.filter((i) => i.doneUnits >= i.totalUnits)
