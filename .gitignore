@@ -17,3 +17,6 @@ acesso/
 # Sistema
 Thumbs.db
 .DS_Store
+
+.vercel
+.env*

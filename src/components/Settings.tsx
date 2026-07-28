@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { useStore } from '../store'
+import { pullNow, useSyncStatus } from '../lib/sync'
 import { GROUPS, GROUP_IDS } from '../data/defaults'
 import type { Group } from '../types'
 import { SectionTitle } from './ui'
@@ -18,6 +19,8 @@ export default function Settings() {
   const resetPoints = useStore((s) => s.resetPoints)
   const resetAll = useStore((s) => s.resetAll)
   const pushToast = useStore((s) => s.pushToast)
+
+  const sync = useSyncStatus()
 
   const fileRef = useRef<HTMLInputElement>(null)
   const [confirmReset, setConfirmReset] = useState(false)
@@ -211,6 +214,22 @@ export default function Settings() {
 
       <section className="card p-5">
         <SectionTitle>Dados</SectionTitle>
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <span className="text-sm" style={{ color: sync.status === 'error' ? 'var(--danger)' : 'var(--ink-3)' }}>
+            {sync.status === 'syncing' && '☁️ Sincronizando…'}
+            {sync.status === 'ok' &&
+              `☁️ Sincronizado entre seus dispositivos${
+                sync.lastSyncAt
+                  ? ` · ${new Date(sync.lastSyncAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+                  : ''
+              }`}
+            {sync.status === 'error' && '⚠️ Sem conexão com a nuvem — dados salvos só neste aparelho'}
+            {sync.status === 'idle' && '☁️ Preparando sincronização…'}
+          </span>
+          <button className="btn px-3 py-1 text-xs" onClick={() => void pullNow()}>
+            🔄 Sincronizar agora
+          </button>
+        </div>
         <div className="flex flex-wrap gap-3">
           <button className="btn" onClick={doExport}>
             ⬇️ Exportar backup (JSON)
@@ -287,7 +306,8 @@ export default function Settings() {
           )}
         </div>
         <p className="mt-3 text-xs" style={{ color: 'var(--ink-3)' }}>
-          Os dados vivem no localStorage deste navegador. Exporte um backup de vez em quando.
+          Seus dados são sincronizados automaticamente na nuvem entre computador e celular.
+          O backup manual continua disponível por garantia.
         </p>
       </section>
     </div>
