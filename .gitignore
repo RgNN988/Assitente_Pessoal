@@ -1,0 +1,19 @@
+# Dependências e build
+node_modules/
+dist/
+
+# Segredos e credenciais (NUNCA subir)
+.env
+.env.*
+credentials.json
+token.json
+
+# Arquivos temporários
+.tmp/
+
+# Arquivos pessoais
+acesso/
+
+# Sistema
+Thumbs.db
+.DS_Store
