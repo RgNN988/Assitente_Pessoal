@@ -7,6 +7,7 @@ import Missions from './components/Missions'
 import Study from './components/Study'
 import Schedule from './components/Schedule'
 import JiuJitsu from './components/JiuJitsu'
+import Leitura from './components/Leitura'
 import Rewards from './components/Rewards'
 import Achievements from './components/Achievements'
 import Settings from './components/Settings'
@@ -17,6 +18,7 @@ const TABS = [
   { id: 'estudos', label: 'Arsenal', icon: '📜' },
   { id: 'grade', label: 'Grade', icon: '🗓️' },
   { id: 'jiujitsu', label: 'Jiu-Jitsu', icon: '🥋' },
+  { id: 'leitura', label: 'Leitura', icon: '📚' },
   { id: 'loja', label: 'Loja', icon: '💰' },
   { id: 'conquistas', label: 'Conquistas', icon: '🏆' },
   { id: 'config', label: 'Config', icon: '⚙️' },
@@ -107,6 +109,7 @@ export default function App() {
             {tab === 'estudos' && <Study />}
             {tab === 'grade' && <Schedule />}
             {tab === 'jiujitsu' && <JiuJitsu />}
+            {tab === 'leitura' && <Leitura />}
             {tab === 'loja' && <Rewards />}
             {tab === 'conquistas' && <Achievements />}
             {tab === 'config' && <Settings />}

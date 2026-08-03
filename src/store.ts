@@ -35,6 +35,7 @@ interface State {
   schedule: ScheduleEvent[]
   turma: number
   trainings: string[] // dias de treino de jiu-jitsu (formato YYYY-MM-DD, um por dia)
+  readings: string[] // dias com 1h de leitura (formato YYYY-MM-DD, um por dia)
   jjBeltIndex: number // graduação real, controlada manualmente
   jjDegree: number // 0..4 graus
   jjPromotedAt: string | null // dia da última graduação (zera o contador)
@@ -69,6 +70,9 @@ interface State {
   addTraining: (day: string) => void
   removeTraining: (day: string) => void
   promoteJJ: () => void
+
+  addReading: (day: string) => void
+  removeReading: (day: string) => void
 
   pushToast: (text: string, tone: Toast['tone']) => void
   dismissToast: (id: string) => void
@@ -150,6 +154,7 @@ export const useStore = create<State>()(
         schedule: DEFAULT_SCHEDULE,
         turma: DEFAULT_TURMA,
         trainings: [],
+        readings: [],
         jjBeltIndex: 0,
         jjDegree: 0,
         jjPromotedAt: null,
@@ -357,6 +362,34 @@ export const useStore = create<State>()(
             ledger: s.ledger.filter((e) => e.id !== `jj-${day}`),
           })),
 
+        addReading: (day) => {
+          const s = get()
+          if (s.readings.includes(day)) return
+          const xpBefore = totalXp(s.ledger)
+          const pts = s.weights.leitura ?? DEFAULT_WEIGHTS.leitura
+          set({
+            readings: [...s.readings, day].sort(),
+            ledger: [
+              ...s.ledger,
+              {
+                id: `read-${day}`,
+                ts: new Date(day + 'T21:00:00').toISOString(),
+                points: pts,
+                group: 'estudos',
+                label: 'Leitura diária (1h)',
+              },
+            ],
+          })
+          toast(`📚 Leitura registrada! +${pts} XP`, 'xp')
+          afterEarn(xpBefore)
+        },
+
+        removeReading: (day) =>
+          set((s) => ({
+            readings: s.readings.filter((d) => d !== day),
+            ledger: s.ledger.filter((e) => e.id !== `read-${day}`),
+          })),
+
         promoteJJ: () => {
           const s = get()
           let belt = s.jjBeltIndex
@@ -387,9 +420,9 @@ export const useStore = create<State>()(
           set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 
         exportData: () => {
-          const { heroName, categories, weights, tasks, studyItems, ledger, rewards, schedule, turma, trainings, jjBeltIndex, jjDegree, jjPromotedAt, seenAchievements } = get()
+          const { heroName, categories, weights, tasks, studyItems, ledger, rewards, schedule, turma, trainings, readings, jjBeltIndex, jjDegree, jjPromotedAt, seenAchievements } = get()
           return JSON.stringify(
-            { version: 2, heroName, categories, weights, tasks, studyItems, ledger, rewards, schedule, turma, trainings, jjBeltIndex, jjDegree, jjPromotedAt, seenAchievements },
+            { version: 2, heroName, categories, weights, tasks, studyItems, ledger, rewards, schedule, turma, trainings, readings, jjBeltIndex, jjDegree, jjPromotedAt, seenAchievements },
             null,
             2,
           )
@@ -410,6 +443,7 @@ export const useStore = create<State>()(
               schedule: d.schedule ?? DEFAULT_SCHEDULE,
               turma: d.turma ?? DEFAULT_TURMA,
               trainings: d.trainings ?? [],
+              readings: d.readings ?? [],
               jjBeltIndex: d.jjBeltIndex ?? 0,
               jjDegree: d.jjDegree ?? 0,
               jjPromotedAt: d.jjPromotedAt ?? null,
@@ -443,6 +477,7 @@ export const useStore = create<State>()(
             schedule: DEFAULT_SCHEDULE,
             turma: DEFAULT_TURMA,
             trainings: [],
+            readings: [],
             jjBeltIndex: 0,
             jjDegree: 0,
             jjPromotedAt: null,
@@ -452,9 +487,10 @@ export const useStore = create<State>()(
     },
     {
       name: 'guilda-ita',
-      version: 3,
+      version: 4,
       // v2: turma do usuário confirmada = 4; regenera as aulas uma única vez.
       // v3: categorias viram dados editáveis no estado.
+      // v4: leitura diária (dias lidos + categoria/peso "leitura").
       migrate: (persisted, version) => {
         const p = persisted as Partial<State> | undefined
         if (p && version < 2 && Array.isArray(p.schedule)) {
@@ -466,6 +502,17 @@ export const useStore = create<State>()(
         }
         if (p && (!Array.isArray(p.categories) || p.categories.length === 0)) {
           p.categories = [...DEFAULT_CATEGORIES]
+        }
+        if (p && version < 4) {
+          p.readings ??= []
+          if (Array.isArray(p.categories) && !p.categories.some((c) => c.id === 'leitura')) {
+            const leitura = DEFAULT_CATEGORIES.find((c) => c.id === 'leitura')!
+            const at = p.categories.findIndex((c) => c.id === 'material')
+            p.categories.splice(at === -1 ? p.categories.length : at + 1, 0, leitura)
+          }
+          if (p.weights && p.weights.leitura === undefined) {
+            p.weights.leitura = DEFAULT_WEIGHTS.leitura
+          }
         }
         return p as State
       },
@@ -480,6 +527,7 @@ export const useStore = create<State>()(
         schedule: s.schedule,
         turma: s.turma,
         trainings: s.trainings,
+        readings: s.readings,
         jjBeltIndex: s.jjBeltIndex,
         jjDegree: s.jjDegree,
         jjPromotedAt: s.jjPromotedAt,

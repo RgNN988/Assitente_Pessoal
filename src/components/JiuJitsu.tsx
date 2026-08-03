@@ -1,72 +1,11 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useStore } from '../store'
-import { dayKey, fmtPts, jjTitle, todayKey } from '../lib/helpers'
+import { fmtPts, jjTitle, todayKey } from '../lib/helpers'
 import { BELTS } from '../data/defaults'
 import { Belt } from './CharacterHeader'
+import PresenceMap from './PresenceMap'
 import { SectionTitle } from './ui'
-
-const WEEKS = 12
-const DAY_LABELS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D']
-
-/** Mapa de presença: últimas 12 semanas, colunas = semanas, linhas = seg→dom. */
-function PresenceMap({ trainings }: { trainings: string[] }) {
-  const got = new Set(trainings)
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const todayStr = todayKey()
-  const monday = new Date(today)
-  monday.setDate(today.getDate() - ((today.getDay() + 6) % 7) - 7 * (WEEKS - 1))
-
-  const columns = []
-  for (let w = 0; w < WEEKS; w++) {
-    const days = []
-    for (let d = 0; d < 7; d++) {
-      const date = new Date(monday)
-      date.setDate(monday.getDate() + w * 7 + d)
-      const key = dayKey(date)
-      days.push({
-        key,
-        future: date > today,
-        trained: got.has(key),
-        isToday: key === todayStr,
-        label: date.toLocaleDateString('pt-BR'),
-      })
-    }
-    columns.push(days)
-  }
-
-  return (
-    <div className="flex items-start gap-2 overflow-x-auto">
-      <div className="flex flex-col gap-1 pt-0.5">
-        {DAY_LABELS.map((l, i) => (
-          <span key={i} className="h-3.5 text-[9px] leading-3.5" style={{ color: 'var(--ink-3)' }}>
-            {l}
-          </span>
-        ))}
-      </div>
-      <div className="flex gap-1">
-        {columns.map((days, w) => (
-          <div key={w} className="flex flex-col gap-1">
-            {days.map((d) => (
-              <span
-                key={d.key}
-                title={d.trained ? `🥋 ${d.label}` : d.label}
-                className="h-3.5 w-3.5 rounded-[4px]"
-                style={{
-                  background: d.trained ? 'var(--c-jiujitsu)' : 'var(--surface-3)',
-                  opacity: d.future ? 0.25 : 1,
-                  outline: d.isToday ? '1.5px solid var(--gold)' : 'none',
-                  outlineOffset: 1,
-                }}
-              />
-            ))}
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 export default function JiuJitsu() {
   const trainings = useStore((s) => s.trainings)
@@ -227,7 +166,7 @@ export default function JiuJitsu() {
         >
           Presença — últimas 12 semanas
         </SectionTitle>
-        <PresenceMap trainings={trainings} />
+        <PresenceMap days={trainings} color="var(--c-jiujitsu)" emoji="🥋" />
       </section>
 
       {/* Histórico */}

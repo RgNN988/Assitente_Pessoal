@@ -82,6 +82,35 @@ export function streakDays(ledger: LedgerEntry[]): number {
   return streak
 }
 
+/** Sequência atual de dias consecutivos (terminando hoje ou ontem) numa lista YYYY-MM-DD. */
+export function currentStreak(days: string[]): number {
+  const set = new Set(days)
+  if (set.size === 0) return 0
+  const cursor = new Date()
+  if (!set.has(dayKey(cursor))) cursor.setDate(cursor.getDate() - 1)
+  let streak = 0
+  while (set.has(dayKey(cursor))) {
+    streak++
+    cursor.setDate(cursor.getDate() - 1)
+  }
+  return streak
+}
+
+/** Maior sequência de dias consecutivos já registrada numa lista YYYY-MM-DD. */
+export function bestStreak(days: string[]): number {
+  const sorted = [...new Set(days)].sort()
+  let best = 0
+  let run = 0
+  let prev = 0
+  for (const d of sorted) {
+    const ts = new Date(d + 'T12:00:00').getTime()
+    run = ts - prev === 86_400_000 ? run + 1 : 1
+    prev = ts
+    if (run > best) best = run
+  }
+  return best
+}
+
 /** Série diária dos últimos N dias, empilhada por grupo. */
 export function dailySeries(ledger: LedgerEntry[], nDays: number) {
   const byDay = new Map<string, Record<Group, number>>()
