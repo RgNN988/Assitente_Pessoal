@@ -11,6 +11,8 @@ import Leitura from './components/Leitura'
 import Rewards from './components/Rewards'
 import Achievements from './components/Achievements'
 import Settings from './components/Settings'
+import LockScreen from './components/LockScreen'
+import { useSyncStatus } from './lib/sync'
 
 const TABS = [
   { id: 'painel', label: 'Painel', icon: '🏰' },
@@ -57,6 +59,12 @@ function Toasts() {
 }
 
 export default function App() {
+  const syncStatus = useSyncStatus((s) => s.status)
+  if (syncStatus === 'locked' || syncStatus === 'loading') return <LockScreen />
+  return <Panel />
+}
+
+function Panel() {
   const [tab, setTab] = useState<TabId>('painel')
 
   return (

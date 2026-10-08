@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useStore } from '../store'
-import { pullNow, useSyncStatus } from '../lib/sync'
+import { listBackups, lock, pullNow, restoreBackup, useSyncStatus } from '../lib/sync'
+import type { Backup } from '../lib/sync'
 import { GROUPS, GROUP_IDS } from '../data/defaults'
 import type { Group } from '../types'
 import { SectionTitle } from './ui'
@@ -26,6 +27,29 @@ export default function Settings() {
   const [confirmReset, setConfirmReset] = useState(false)
   const [confirmPoints, setConfirmPoints] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+
+  const [backups, setBackups] = useState<Backup[] | null>(null)
+  const [backupsError, setBackupsError] = useState(false)
+  const [confirmRestore, setConfirmRestore] = useState<string | null>(null)
+
+  const loadBackups = async () => {
+    setBackupsError(false)
+    try {
+      setBackups(await listBackups())
+    } catch {
+      setBackupsError(true)
+    }
+  }
+
+  const doRestore = async (pathname: string) => {
+    setConfirmRestore(null)
+    try {
+      const ok = await restoreBackup(pathname)
+      pushToast(ok ? '⏪ Backup restaurado!' : 'Backup inválido.', ok ? 'level' : 'spend')
+    } catch {
+      pushToast('Não foi possível baixar o backup.', 'spend')
+    }
+  }
 
   const [newIcon, setNewIcon] = useState('')
   const [newLabel, setNewLabel] = useState('')
@@ -309,6 +333,81 @@ export default function Settings() {
           Seus dados são sincronizados automaticamente na nuvem entre computador e celular.
           O backup manual continua disponível por garantia.
         </p>
+      </section>
+
+      <section className="card p-5">
+        <SectionTitle
+          right={
+            <button className="btn px-3 py-1 text-xs" onClick={() => void loadBackups()}>
+              {backups ? '🔄 Atualizar' : '📂 Ver backups'}
+            </button>
+          }
+        >
+          Backups na nuvem
+        </SectionTitle>
+        <p className="mb-3 text-xs" style={{ color: 'var(--ink-3)' }}>
+          A cada hora com alterações, a nuvem guarda uma cópia de como o painel estava antes
+          (por 60 dias). Restaurar substitui o estado atual — que também fica guardado como backup.
+        </p>
+        {backupsError && (
+          <p className="text-sm" style={{ color: 'var(--danger)' }}>
+            Não foi possível carregar os backups.
+          </p>
+        )}
+        {backups && backups.length === 0 && (
+          <p className="text-sm" style={{ color: 'var(--ink-3)' }}>
+            Nenhum backup ainda.
+          </p>
+        )}
+        {backups && backups.length > 0 && (
+          <ul className="flex max-h-72 flex-col gap-1.5 overflow-y-auto">
+            {backups.map((b) => (
+              <li
+                key={b.pathname}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm"
+                style={{ background: 'var(--surface-2)' }}
+              >
+                <span>
+                  {new Date(b.uploadedAt).toLocaleString('pt-BR', {
+                    weekday: 'short',
+                    day: '2-digit',
+                    month: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+                {confirmRestore === b.pathname ? (
+                  <span className="flex items-center gap-2">
+                    <button
+                      className="btn px-3 py-1 text-xs"
+                      style={{ borderColor: 'var(--gold-deep)', color: 'var(--gold)' }}
+                      onClick={() => void doRestore(b.pathname)}
+                    >
+                      Sim, restaurar
+                    </button>
+                    <button className="btn-ghost btn px-3 py-1 text-xs" onClick={() => setConfirmRestore(null)}>
+                      Cancelar
+                    </button>
+                  </span>
+                ) : (
+                  <button className="btn px-3 py-1 text-xs" onClick={() => setConfirmRestore(b.pathname)}>
+                    ⏪ Restaurar
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="card p-5">
+        <SectionTitle>Acesso</SectionTitle>
+        <p className="mb-3 text-xs" style={{ color: 'var(--ink-3)' }}>
+          O painel pede senha em cada dispositivo. Use “Sair” num computador emprestado ou compartilhado.
+        </p>
+        <button className="btn" onClick={lock}>
+          🔒 Sair deste dispositivo
+        </button>
       </section>
     </div>
   )
