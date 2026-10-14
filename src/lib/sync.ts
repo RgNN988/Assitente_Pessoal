@@ -138,6 +138,7 @@ export function mergeData(local: Data, remote: Data): Data {
     schedule: mergeById(local.schedule, remote.schedule),
     trainings: mergeSet(local.trainings, remote.trainings),
     readings: mergeSet(local.readings, remote.readings),
+    gratitudes: mergeSet(local.gratitudes, remote.gratitudes),
     seenAchievements: mergeSet(local.seenAchievements, remote.seenAchievements),
     jjBeltIndex: jj.jjBeltIndex,
     jjDegree: jj.jjDegree,

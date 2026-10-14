@@ -5,7 +5,7 @@ import CharacterHeader from './components/CharacterHeader'
 import Dashboard from './components/Dashboard'
 import Missions from './components/Missions'
 import Study from './components/Study'
-import Schedule from './components/Schedule'
+import Gratidao from './components/Gratidao'
 import JiuJitsu from './components/JiuJitsu'
 import Leitura from './components/Leitura'
 import Rewards from './components/Rewards'
@@ -18,9 +18,9 @@ const TABS = [
   { id: 'painel', label: 'Painel', icon: '🏰' },
   { id: 'missoes', label: 'Missões', icon: '⚔️' },
   { id: 'estudos', label: 'Arsenal', icon: '📜' },
-  { id: 'grade', label: 'Grade', icon: '🗓️' },
   { id: 'jiujitsu', label: 'Jiu-Jitsu', icon: '🥋' },
   { id: 'leitura', label: 'Leitura', icon: '📚' },
+  { id: 'gratidao', label: 'Gratidão', icon: '🙏' },
   { id: 'loja', label: 'Loja', icon: '💰' },
   { id: 'conquistas', label: 'Conquistas', icon: '🏆' },
   { id: 'config', label: 'Config', icon: '⚙️' },
@@ -115,9 +115,9 @@ function Panel() {
             {tab === 'painel' && <Dashboard />}
             {tab === 'missoes' && <Missions />}
             {tab === 'estudos' && <Study />}
-            {tab === 'grade' && <Schedule />}
             {tab === 'jiujitsu' && <JiuJitsu />}
             {tab === 'leitura' && <Leitura />}
+            {tab === 'gratidao' && <Gratidao />}
             {tab === 'loja' && <Rewards />}
             {tab === 'conquistas' && <Achievements />}
             {tab === 'config' && <Settings />}

@@ -8,6 +8,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'itajr', label: 'ITA Júnior', group: 'iniciativas', icon: '🏛️' },
   { id: 'lei', label: 'Liga de Empreendedorismo', group: 'iniciativas', icon: '🚀' },
   { id: 'jiujitsu', label: 'Jiu-jitsu', group: 'jiujitsu', icon: '🥋' },
+  { id: 'gratidao', label: 'Caderno de gratidão', group: 'pessoal', icon: '🙏' },
   { id: 'pessoal', label: 'Pessoal', group: 'pessoal', icon: '🎒' },
 ]
 
@@ -38,6 +39,7 @@ export const DEFAULT_WEIGHTS: Record<CategoryId, number> = {
   lista: 35,
   material: 25,
   leitura: 20,
+  gratidao: 30,
   itajr: 20,
   lei: 20,
   jiujitsu: 15,

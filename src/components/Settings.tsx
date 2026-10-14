@@ -275,7 +275,7 @@ export default function Settings() {
           {confirmPoints ? (
             <span className="flex items-center gap-2">
               <span className="text-xs" style={{ color: 'var(--gold)' }}>
-                Zerar XP, saldo e sequência? (missões, arsenal, loja e grade ficam)
+                Zerar XP, saldo e sequência? (missões, arsenal e loja ficam)
               </span>
               <button
                 className="btn"

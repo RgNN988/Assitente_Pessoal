@@ -43,7 +43,7 @@ async function readJson(pathname) {
 /** Quantidade de registros — se a nova versão tiver menos, algo está sendo apagado. */
 function size(data) {
   const n = (v) => (Array.isArray(v) ? v.length : 0)
-  return n(data?.ledger) + n(data?.trainings) + n(data?.readings) + n(data?.tasks) + n(data?.studyItems)
+  return n(data?.ledger) + n(data?.trainings) + n(data?.readings) + n(data?.gratitudes) + n(data?.tasks) + n(data?.studyItems)
 }
 
 async function backup(currentText, removesData) {

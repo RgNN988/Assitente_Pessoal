@@ -36,6 +36,7 @@ interface State {
   turma: number
   trainings: string[] // dias de treino de jiu-jitsu (formato YYYY-MM-DD, um por dia)
   readings: string[] // dias com 1h de leitura (formato YYYY-MM-DD, um por dia)
+  gratitudes: string[] // dias com o caderno de gratidão feito (YYYY-MM-DD, um por dia)
   jjBeltIndex: number // graduação real, controlada manualmente
   jjDegree: number // 0..4 graus
   jjPromotedAt: string | null // dia da última graduação (zera o contador)
@@ -74,6 +75,9 @@ interface State {
   addReading: (day: string) => void
   removeReading: (day: string) => void
 
+  addGratitude: (day: string) => void
+  removeGratitude: (day: string) => void
+
   pushToast: (text: string, tone: Toast['tone']) => void
   dismissToast: (id: string) => void
 
@@ -111,6 +115,16 @@ export function unlockedAchievements(s: {
   if (s.studyItems.filter((i) => i.totalUnits > 0 && i.doneUnits >= i.totalUnits).length >= 5)
     out.push('arsenal-5')
   if (s.ledger.some((e) => e.group === 'resgate')) out.push('shopper')
+  return out
+}
+
+/** Dados exportados antes do caderno de gratidão não têm a categoria dele. */
+function withGratidao(categories: Category[]): Category[] {
+  if (categories.some((c) => c.id === 'gratidao')) return categories
+  const gratidao = DEFAULT_CATEGORIES.find((c) => c.id === 'gratidao')!
+  const at = categories.findIndex((c) => c.id === 'pessoal')
+  const out = [...categories]
+  out.splice(at === -1 ? out.length : at, 0, gratidao)
   return out
 }
 
@@ -155,6 +169,7 @@ export const useStore = create<State>()(
         turma: DEFAULT_TURMA,
         trainings: [],
         readings: [],
+        gratitudes: [],
         jjBeltIndex: 0,
         jjDegree: 0,
         jjPromotedAt: null,
@@ -390,6 +405,34 @@ export const useStore = create<State>()(
             ledger: s.ledger.filter((e) => e.id !== `read-${day}`),
           })),
 
+        addGratitude: (day) => {
+          const s = get()
+          if (s.gratitudes.includes(day)) return
+          const xpBefore = totalXp(s.ledger)
+          const pts = s.weights.gratidao ?? DEFAULT_WEIGHTS.gratidao
+          set({
+            gratitudes: [...s.gratitudes, day].sort(),
+            ledger: [
+              ...s.ledger,
+              {
+                id: `grat-${day}`,
+                ts: new Date(day + 'T22:00:00').toISOString(),
+                points: pts,
+                group: 'pessoal',
+                label: 'Caderno de gratidão',
+              },
+            ],
+          })
+          toast(`🙏 Gratidão registrada! +${pts} XP`, 'xp')
+          afterEarn(xpBefore)
+        },
+
+        removeGratitude: (day) =>
+          set((s) => ({
+            gratitudes: s.gratitudes.filter((d) => d !== day),
+            ledger: s.ledger.filter((e) => e.id !== `grat-${day}`),
+          })),
+
         promoteJJ: () => {
           const s = get()
           let belt = s.jjBeltIndex
@@ -420,9 +463,9 @@ export const useStore = create<State>()(
           set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 
         exportData: () => {
-          const { heroName, categories, weights, tasks, studyItems, ledger, rewards, schedule, turma, trainings, readings, jjBeltIndex, jjDegree, jjPromotedAt, seenAchievements } = get()
+          const { heroName, categories, weights, tasks, studyItems, ledger, rewards, schedule, turma, trainings, readings, gratitudes, jjBeltIndex, jjDegree, jjPromotedAt, seenAchievements } = get()
           return JSON.stringify(
-            { version: 2, heroName, categories, weights, tasks, studyItems, ledger, rewards, schedule, turma, trainings, readings, jjBeltIndex, jjDegree, jjPromotedAt, seenAchievements },
+            { version: 2, heroName, categories, weights, tasks, studyItems, ledger, rewards, schedule, turma, trainings, readings, gratitudes, jjBeltIndex, jjDegree, jjPromotedAt, seenAchievements },
             null,
             2,
           )
@@ -434,7 +477,9 @@ export const useStore = create<State>()(
             if (!d || typeof d !== 'object' || !Array.isArray(d.ledger)) return false
             set({
               heroName: d.heroName ?? 'Guerreiro',
-              categories: Array.isArray(d.categories) && d.categories.length ? d.categories : [...DEFAULT_CATEGORIES],
+              categories: withGratidao(
+                Array.isArray(d.categories) && d.categories.length ? d.categories : [...DEFAULT_CATEGORIES],
+              ),
               weights: { ...DEFAULT_WEIGHTS, ...(d.weights ?? {}) },
               tasks: d.tasks ?? [],
               studyItems: d.studyItems ?? [],
@@ -444,6 +489,7 @@ export const useStore = create<State>()(
               turma: d.turma ?? DEFAULT_TURMA,
               trainings: d.trainings ?? [],
               readings: d.readings ?? [],
+              gratitudes: d.gratitudes ?? [],
               jjBeltIndex: d.jjBeltIndex ?? 0,
               jjDegree: d.jjDegree ?? 0,
               jjPromotedAt: d.jjPromotedAt ?? null,
@@ -478,6 +524,7 @@ export const useStore = create<State>()(
             turma: DEFAULT_TURMA,
             trainings: [],
             readings: [],
+            gratitudes: [],
             jjBeltIndex: 0,
             jjDegree: 0,
             jjPromotedAt: null,
@@ -487,10 +534,11 @@ export const useStore = create<State>()(
     },
     {
       name: 'guilda-ita',
-      version: 4,
+      version: 5,
       // v2: turma do usuário confirmada = 4; regenera as aulas uma única vez.
       // v3: categorias viram dados editáveis no estado.
       // v4: leitura diária (dias lidos + categoria/peso "leitura").
+      // v5: caderno de gratidão diário (dias + categoria/peso "gratidao").
       migrate: (persisted, version) => {
         const p = persisted as Partial<State> | undefined
         if (p && version < 2 && Array.isArray(p.schedule)) {
@@ -514,6 +562,17 @@ export const useStore = create<State>()(
             p.weights.leitura = DEFAULT_WEIGHTS.leitura
           }
         }
+        if (p && version < 5) {
+          p.gratitudes ??= []
+          if (Array.isArray(p.categories) && !p.categories.some((c) => c.id === 'gratidao')) {
+            const gratidao = DEFAULT_CATEGORIES.find((c) => c.id === 'gratidao')!
+            const at = p.categories.findIndex((c) => c.id === 'pessoal')
+            p.categories.splice(at === -1 ? p.categories.length : at, 0, gratidao)
+          }
+          if (p.weights && p.weights.gratidao === undefined) {
+            p.weights.gratidao = DEFAULT_WEIGHTS.gratidao
+          }
+        }
         return p as State
       },
       partialize: (s) => ({
@@ -528,6 +587,7 @@ export const useStore = create<State>()(
         turma: s.turma,
         trainings: s.trainings,
         readings: s.readings,
+        gratitudes: s.gratitudes,
         jjBeltIndex: s.jjBeltIndex,
         jjDegree: s.jjDegree,
         jjPromotedAt: s.jjPromotedAt,
